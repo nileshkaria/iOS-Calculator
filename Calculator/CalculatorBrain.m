@@ -77,7 +77,7 @@
     //Two operand operation
     //Variable
     //(Try helpers with NSSet containsObject)
-    return @"Assignment 2";
+    return @"Write Assignment 2 code here";
 }
 
 // Change to use variables
