@@ -58,7 +58,7 @@
     return [self.programStack copy];
 }
 
-//dictionaryWithObjectsAndKeys: for 3e
+//Add dictionaryWithObjectsAndKeys: for 3e
 
 + (BOOL) isOperation:(NSString *)operation
 {
