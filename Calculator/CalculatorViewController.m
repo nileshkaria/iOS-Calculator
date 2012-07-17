@@ -12,7 +12,9 @@
 @interface CalculatorViewController()
 
 @property (nonatomic) BOOL userIsInTheMiddleOfEnteringANumber;
+@property (nonatomic) BOOL userEnteredVariable;
 @property (nonatomic, strong) CalculatorBrain *brain;
+@property (nonatomic, strong) NSString * variableName;
 
 @end
 
@@ -21,7 +23,9 @@
 @synthesize display = _display;
 @synthesize stackDisplay = _stackDisplay;
 @synthesize userIsInTheMiddleOfEnteringANumber = _userIsInTheMiddleOfEnteringANumber;
+@synthesize userEnteredVariable = _userEnteredVariable;
 @synthesize brain = _brain;
+@synthesize variableName = _variableName;
 
 - (CalculatorBrain *) brain
 {
@@ -51,20 +55,83 @@
 
 - (IBAction)variablePressed:(UIButton *)sender 
 {
+    if(self.userEnteredVariable)
+        return;
+    
+    self.userEnteredVariable = YES;
+    self.variableName = sender.currentTitle;
+    
     self.display.text = sender.currentTitle;
     self.stackDisplay.text = [[self.stackDisplay.text stringByAppendingFormat:@" "] stringByAppendingFormat:[sender currentTitle]];
 }
 
+- (IBAction)equalPressed 
+{
+    //Variable cannot be assigned to another variable
+    if([CalculatorBrain isVariable:self.display.text])
+        return;
+    
+    //Reset values to allow input of variables and numbers later
+    self.userEnteredVariable = NO;
+    self.userIsInTheMiddleOfEnteringANumber = NO;
+    
+    [self.brain assignValueToVariable:self.display.text
+                usingVariable:self.variableName];
+}
+
 - (IBAction)enterPressed 
 {
-    [self.brain pushOperand:[self.display.text doubleValue]];
-    self.userIsInTheMiddleOfEnteringANumber = NO;
+    if([CalculatorBrain isVariable:self.display.text] == NO)
+    {        
+        [self.brain pushOperand:[self.display.text doubleValue]];
+        
+        //@TODO - Why the check here?
+        if(self.userIsInTheMiddleOfEnteringANumber)
+        {
+            [self.brain pushFormula:[self.display.text doubleValue]];
+            [self.brain pushInfix:[self.display.text doubleValue]];    
+        }
+        
+        self.userIsInTheMiddleOfEnteringANumber = NO;
+    }
+    else
+    {
+        [self.brain pushVariable:self.display.text];
+        self.userEnteredVariable = NO;
+    }
+}
+
+- (IBAction)undoPressed 
+{
+    //If user is in the middle of typing a number, delete the previous digit
+    if(self.userIsInTheMiddleOfEnteringANumber)
+    {
+        if([CalculatorBrain isVariable:self.display.text] == NO)
+        {
+            self.display.text = [self.display.text substringToIndex:[self.display.text length] - 1];
+            
+            self.stackDisplay.text = [self.stackDisplay.text substringToIndex:[self.stackDisplay.text length] - 1];
+            
+            if([self.display.text length] == 0)
+                self.userIsInTheMiddleOfEnteringANumber = NO;
+        }
+    }
+    else
+    {
+    
+        self.display.text = [NSString stringWithFormat:@"%g", [self.brain removeLastObjectAndPerformOperation]];
+    
+        //[self enterPressed]; needed?
+        
+        self.stackDisplay.text = [self.brain descriptionOfTopOfStack];
+    }
 }
 
 - (IBAction)operationPressed:(UIButton *)sender 
 {
     //If user is in the middle of typing a number, implicitly press Enter
-    if(self.userIsInTheMiddleOfEnteringANumber)
+    if(self.userIsInTheMiddleOfEnteringANumber ||
+       self.userEnteredVariable)
         [self enterPressed];
     
     self.display.text = [NSString stringWithFormat:@"%g", [self.brain performOperation:[sender currentTitle]]];
@@ -78,18 +145,30 @@
        [[sender currentTitle] isEqualToString:@"∏"])
         [self enterPressed];
     
-    self.stackDisplay.text = [[self.stackDisplay.text stringByAppendingFormat:@" "] stringByAppendingFormat:[sender currentTitle]];
+    //self.stackDisplay.text = [[self.stackDisplay.text stringByAppendingFormat:@" "] stringByAppendingFormat:[sender currentTitle]];
+    
+    //NSLog(@"Infix [%@]", [self.brain descriptionOfTopOfStack]);
+    
+    self.stackDisplay.text = [self.brain descriptionOfTopOfStack];
+}
+
+- (IBAction)testFormula 
+{
+    self.display.text = [NSString stringWithFormat:@"%g", [self.brain performOperationUsingVariables]];
 }
 
 - (IBAction)decimalPressed:(UIButton *)sender 
 {
-    //If we already have a decimal in the result, do not reset decimal pressed
-    NSRange range = [self.display.text rangeOfString:@"."];
-    if(range.location == NSNotFound)
+    if([CalculatorBrain isVariable:self.display.text] == NO)
     {
-        self.display.text = [self.display.text stringByAppendingString:@"."];
-        self.stackDisplay.text = [self.stackDisplay.text stringByAppendingFormat:@"."];
-        self.userIsInTheMiddleOfEnteringANumber = YES;
+        //If we already have a decimal in the result, do not reset decimal pressed
+        NSRange range = [self.display.text rangeOfString:@"."];
+        if(range.location == NSNotFound)
+        {
+            self.display.text = [self.display.text stringByAppendingString:@"."];
+            self.stackDisplay.text = [self.stackDisplay.text stringByAppendingFormat:@"."];
+            self.userIsInTheMiddleOfEnteringANumber = YES;
+        }
     }
 }
 
@@ -98,6 +177,7 @@
     [self.brain clearStack];
     
     self.userIsInTheMiddleOfEnteringANumber = NO;
+    self.userEnteredVariable = NO;
     
     self.display.text = @"0";
     self.stackDisplay.text= @"";
