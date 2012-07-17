@@ -10,14 +10,36 @@
 
 @interface CalculatorBrain : NSObject
 
-- (void)   pushOperand:(double) operand;
-- (double) popOperand;
 - (void)   clearStack;
+- (void)   pushOperand:(double) operand;
+- (void)   pushFormula:(double) operand;
+- (void)   pushInfix:(double) operand;
+- (void)   pushVariable:(NSString *) operand;
+
+- (void)    assignValueToVariable:(id)value
+                    usingVariable:(NSString *)variable;
+
+- (double) popOperand;
+- (double) performOperationUsingVariables;
+- (double) removeLastObjectAndPerformOperation;
 - (double) performOperation:(NSString *)operation;
 
-@property (readonly) id program;
+- (NSString *) descriptionOfTopOfStack;
 
-+ (double) runProgram:(id)program;
-+ (NSString *) descriptionOfProgram:(id)program;
+@property (readonly) id program;
+@property (readonly) id infix;
+@property (readonly) id formula;
+
++ (BOOL)        isVariable:(NSString *)operand;
+
++ (NSSet *)     variablesUsedInProgram:(id)program;
++ (NSString *)  isOperation:(NSString *)operation;
+
++ (void)        generateInfix:(NSMutableArray *)infixStackOutput
+                usingInfixStack:(NSMutableArray *)infixStack;
+
++ (double)      runProgram:(id)program;
++ (double)      runProgram:(id)program
+                usingVariableValues:(NSMutableDictionary *)variableValues;
 
 @end
